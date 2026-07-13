@@ -650,6 +650,80 @@
     color:#1a1409;
   }
 
+  /* ---------- STICKERS (free image overlay: move / resize / rotate) ---------- */
+  #stickerLayer{
+    position:absolute; inset:0;
+    z-index:5;
+    pointer-events:none;
+  }
+  .sticker{
+    position:absolute;
+    pointer-events:auto;
+    touch-action:none;
+    cursor:move;
+    user-select:none;
+  }
+  .sticker img.sticker-img{
+    width:100%; height:100%;
+    display:block;
+    pointer-events:none;
+    user-select:none;
+    -webkit-user-drag:none;
+  }
+  .sticker.selected{
+    outline:2px dashed var(--gold);
+    outline-offset:6px;
+  }
+  .sticker-handle{
+    position:absolute;
+    width:18px; height:18px;
+    border-radius:50%;
+    background:var(--gold);
+    border:2px solid #1a1409;
+    box-shadow:0 2px 6px rgba(0,0,0,.5);
+    display:none;
+    z-index:10;
+  }
+  .sticker.selected .sticker-handle{ display:block; }
+  .sticker-handle.resize{
+    right:-9px; bottom:-9px;
+    cursor:nwse-resize;
+  }
+  .sticker-handle.rotate{
+    left:50%; top:-30px;
+    transform:translateX(-50%);
+    cursor:grab;
+  }
+  .sticker-handle.rotate::before{
+    content:"";
+    position:absolute;
+    top:18px; left:50%;
+    width:1px; height:12px;
+    background:var(--gold);
+    transform:translateX(-50%);
+  }
+  .sticker-delete{
+    position:absolute;
+    top:-11px; right:-11px;
+    width:22px; height:22px;
+    border-radius:50%;
+    background:var(--red);
+    color:#fff2ea;
+    border:2px solid #1a1409;
+    font-size:13px;
+    line-height:1;
+    padding:0;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+    z-index:10;
+  }
+  .sticker.selected .sticker-delete{ display:flex; }
+  #card.exporting .sticker-handle,
+  #card.exporting .sticker-delete{ display:none !important; }
+  #card.exporting .sticker.selected{ outline:none; }
+
   @media (max-width:960px){
     #stage{ transform-origin:top center; }
   }
@@ -664,6 +738,7 @@
       <h1> RECORD PROFILE MAKER </h1>
     </div>
     <div class="actions">
+      <button id="stickerAddBtn">스티커 추가</button>
       <button id="resetBtn">초기화</button>
       <button id="pngBtn">PNG로 저장</button>
       <button id="gifBtn" class="primary">GIF로 저장 (움직임 포함)</button>
@@ -680,7 +755,8 @@
   <div class="hint-bar">
     카드 위 텍스트는 <b>클릭해서 바로 수정</b>하세요. 글자를 <b>드래그해서 선택</b>하면 크기·굵기·기울임·색상·형광펜을 바꿀 수 있는 도구가 떠요.
     레코드 라벨과 4개의 플레이리스트 칸은 <BR> <b>클릭하면 이미지를 넣을 수</b> 있고, 넣은 뒤에는 <b>휠로 확대·드래그로 이동</b>할 수 있어요.
-    GIF로 저장하면 레코드판이 <b>돌아가는 움직임까지</b> 저장됩니다.
+    GIF로 저장하면 레코드판이 <b>돌아가는 움직임까지</b> 저장됩니다.<BR>
+    <b>스티커 추가</b> 버튼으로 이미지를 카드 위에 자유롭게 올릴 수 있어요. 몸통을 <b>드래그해서 위치</b>를, 모서리의 동그란 <b>손잡이로 크기</b>를, 위쪽 손잡이로 <b>회전</b>을 조절하세요. 빨간 × 버튼으로 삭제할 수 있어요.
   </div>
 
   <div class="floating-toolbar" id="floatingToolbar">
@@ -843,6 +919,8 @@
           <span contenteditable="true" data-ph="왼쪽 하단 라벨">Side A</span>
           <span contenteditable="true" data-ph="오른쪽 하단 라벨">Handle with care</span>
         </div>
+
+        <div id="stickerLayer"></div>
       </div>
     </div>
   </div>
@@ -862,10 +940,12 @@ const fileInput = document.getElementById('fileInput');
 let currentUploadTarget = null;
 
 const CARD_W = 1920, CARD_H = 1080;
+let currentStageScale = 1;
 function scaleStage(){
   const maxW = Math.min(window.innerWidth - 32, CARD_W);
   const maxH = window.innerHeight * 0.62;
   const scale = Math.min(1, maxW / CARD_W, maxH / CARD_H);
+  currentStageScale = scale;
   stage.style.transform = `scale(${scale})`;
   stage.style.transformOrigin = 'top center';
   stage.style.marginBottom = (CARD_H*scale - CARD_H) + 'px';
@@ -1107,9 +1187,176 @@ fileInput.addEventListener('change', async (e)=>{
   const dataUrl = await normalizeImageOrientation(file);
   if(target.type === 'bg'){
     loadBgImage(dataUrl);
+  } else if(target.type === 'sticker'){
+    addStickerFromDataUrl(dataUrl);
   } else {
     setSlotImage(target.el, dataUrl);
   }
+});
+
+// ---- stickers: free image overlay (move / resize / rotate / delete) ----
+const stickerLayer = document.getElementById('stickerLayer');
+let stickerZCounter = 10;
+
+function cardPointToLocal(clientX, clientY){
+  const rect = card.getBoundingClientRect();
+  return {
+    x: (clientX - rect.left) / currentStageScale,
+    y: (clientY - rect.top) / currentStageScale
+  };
+}
+
+function deselectAllStickers(){
+  stickerLayer.querySelectorAll('.sticker.selected').forEach(s=>s.classList.remove('selected'));
+}
+function selectSticker(sticker){
+  deselectAllStickers();
+  sticker.classList.add('selected');
+  sticker.style.zIndex = ++stickerZCounter;
+}
+// clicking anywhere on the card that isn't a sticker deselects the current one
+card.addEventListener('pointerdown', (e)=>{
+  if(!e.target.closest('.sticker')) deselectAllStickers();
+});
+
+function setupSticker(sticker){
+  let mode = null; // 'move' | 'resize' | 'rotate'
+  let start = {};
+
+  function getState(){
+    return {
+      x: parseFloat(sticker.style.left) || 0,
+      y: parseFloat(sticker.style.top) || 0,
+      w: parseFloat(sticker.style.width) || 1,
+      h: parseFloat(sticker.style.height) || 1,
+      angle: parseFloat(sticker.dataset.angle) || 0
+    };
+  }
+  function applyState(st){
+    sticker.style.left = st.x + 'px';
+    sticker.style.top = st.y + 'px';
+    sticker.style.width = st.w + 'px';
+    sticker.style.height = st.h + 'px';
+    sticker.dataset.angle = st.angle;
+    sticker.style.transform = `rotate(${st.angle}deg)`;
+  }
+
+  sticker.addEventListener('pointerdown', (e)=>{
+    if(e.target.closest('.sticker-delete')) return;
+    e.stopPropagation();
+    selectSticker(sticker);
+    const p = cardPointToLocal(e.clientX, e.clientY);
+    const st = getState();
+    if(e.target.closest('.sticker-handle.resize')){
+      mode = 'resize';
+      const cx = st.x + st.w/2, cy = st.y + st.h/2;
+      const dist0 = Math.hypot(p.x - cx, p.y - cy) || 1;
+      start = { st, cx, cy, dist0 };
+    } else if(e.target.closest('.sticker-handle.rotate')){
+      mode = 'rotate';
+      const cx = st.x + st.w/2, cy = st.y + st.h/2;
+      const mouseAngle0 = Math.atan2(p.y - cy, p.x - cx) * 180/Math.PI;
+      start = { st, cx, cy, mouseAngle0 };
+    } else {
+      mode = 'move';
+      start = { st, px: p.x, py: p.y };
+    }
+    sticker.setPointerCapture(e.pointerId);
+  });
+
+  sticker.addEventListener('pointermove', (e)=>{
+    if(!mode) return;
+    const p = cardPointToLocal(e.clientX, e.clientY);
+    if(mode === 'move'){
+      applyState({ ...start.st, x: start.st.x + (p.x - start.px), y: start.st.y + (p.y - start.py) });
+    } else if(mode === 'resize'){
+      const dist = Math.hypot(p.x - start.cx, p.y - start.cy) || 1;
+      const factor = Math.min(6, Math.max(0.15, dist / start.dist0));
+      const w = Math.max(20, start.st.w * factor);
+      const h = Math.max(20, start.st.h * factor);
+      applyState({ ...start.st, w, h, x: start.cx - w/2, y: start.cy - h/2 });
+    } else if(mode === 'rotate'){
+      const mouseAngle = Math.atan2(p.y - start.cy, p.x - start.cx) * 180/Math.PI;
+      applyState({ ...start.st, angle: start.st.angle + (mouseAngle - start.mouseAngle0) });
+    }
+  });
+
+  const endMode = ()=>{ mode = null; };
+  sticker.addEventListener('pointerup', endMode);
+  sticker.addEventListener('pointercancel', endMode);
+
+  // wheel = quick resize around its own center
+  sticker.addEventListener('wheel', (e)=>{
+    e.preventDefault();
+    const st = getState();
+    const cx = st.x + st.w/2, cy = st.y + st.h/2;
+    const factor = 1 - e.deltaY * 0.0015;
+    const w = Math.min(CARD_W * 2, Math.max(20, st.w * factor));
+    const h = st.h * (w / st.w);
+    applyState({ ...st, w, h, x: cx - w/2, y: cy - h/2 });
+  }, {passive:false});
+
+  sticker.querySelector('.sticker-delete').addEventListener('click', (e)=>{
+    e.stopPropagation();
+    sticker.remove();
+  });
+}
+
+function createSticker(dataUrl, x, y, w, h){
+  const sticker = document.createElement('div');
+  sticker.className = 'sticker';
+  sticker.style.left = x + 'px';
+  sticker.style.top = y + 'px';
+  sticker.style.width = w + 'px';
+  sticker.style.height = h + 'px';
+  sticker.dataset.angle = 0;
+  sticker.style.transform = 'rotate(0deg)';
+  sticker.style.zIndex = ++stickerZCounter;
+
+  const img = document.createElement('img');
+  img.className = 'sticker-img';
+  img.src = dataUrl;
+  img.draggable = false;
+  img.alt = '';
+  sticker.appendChild(img);
+
+  const rotateHandle = document.createElement('div');
+  rotateHandle.className = 'sticker-handle rotate';
+  sticker.appendChild(rotateHandle);
+
+  const resizeHandle = document.createElement('div');
+  resizeHandle.className = 'sticker-handle resize';
+  sticker.appendChild(resizeHandle);
+
+  const delBtn = document.createElement('button');
+  delBtn.type = 'button';
+  delBtn.className = 'sticker-delete';
+  delBtn.textContent = '×';
+  sticker.appendChild(delBtn);
+
+  stickerLayer.appendChild(sticker);
+  setupSticker(sticker);
+  selectSticker(sticker);
+}
+
+function addStickerFromDataUrl(dataUrl){
+  const img = new Image();
+  img.onload = ()=>{
+    const nw = img.naturalWidth || 300, nh = img.naturalHeight || 300;
+    const MAX = 320;
+    let w, h;
+    if(nw >= nh){ w = MAX; h = MAX * nh / nw; } else { h = MAX; w = MAX * nw / nh; }
+    const jitter = ()=> (Math.random() - 0.5) * 140;
+    const x = CARD_W/2 - w/2 + jitter();
+    const y = CARD_H/2 - h/2 + jitter();
+    createSticker(dataUrl, x, y, w, h);
+  };
+  img.src = dataUrl;
+}
+
+document.getElementById('stickerAddBtn').addEventListener('click', ()=>{
+  currentUploadTarget = { type: 'sticker' };
+  fileInput.click();
 });
 
 // ---- background: color / image / blur ----
@@ -1352,6 +1599,7 @@ document.getElementById('pngBtn').addEventListener('click', async ()=>{
   btn.disabled = true;
   try{
     status.textContent = 'PNG를 준비 중입니다...';
+    deselectAllStickers();
 
     // ① 웹폰트가 완전히 로드된 후 캡처 (폰트 깨짐 방지)
     await document.fonts.ready;
@@ -1460,6 +1708,7 @@ document.getElementById('gifBtn').addEventListener('click', async ()=>{
 
   try{
     status.textContent = 'GIF를 준비 중입니다...';
+    deselectAllStickers();
 
     // ① 웹폰트가 완전히 로드된 후 캡처 (폰트 깨짐 방지)
     await document.fonts.ready;
