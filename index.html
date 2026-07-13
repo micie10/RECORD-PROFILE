@@ -409,11 +409,14 @@
     margin-bottom:0;
     background:rgba(0,0,0,.15);
   }
-  .box.ng{
-    background:rgba(168,64,47,.07);
+  .box{
+    background:var(--about-bg-color, rgba(0,0,0,.15));
   }
-  .box.ng .section-label{color:#d98066;}
-  .box.ng .section-label::after{background:rgba(168,64,47,.35);}
+  .box.ng{
+    background:var(--ng-bg-color, rgba(168,64,47,.07));
+  }
+  .box.ng .section-label{color:var(--ng-label-color, #d98066);}
+  .box.ng .section-label::after{background:var(--ng-line-color, rgba(168,64,47,.35));}
   .box p{
     margin:0;
     font-size:14px;
@@ -432,7 +435,7 @@
     font-family:'Pretendard', sans-serif;
     font-size:10px;
     letter-spacing:.15em;
-    color:#6a5d4a;
+    color:var(--footer-color, #6a5d4a);
     text-transform:uppercase;
   }
 
@@ -617,6 +620,19 @@
     <div class="style-group">
       <span class="style-label">박스 테두리</span>
       <label class="mini-label">색상 <input type="color" id="borderColorInput" value="#3a322a"></label>
+    </div>
+    <div class="style-group">
+      <span class="style-label">포인트 색상</span>
+      <label class="mini-label">골드 포인트 <input type="color" id="accentColorInput" value="#c9a24b"></label>
+    </div>
+    <div class="style-group">
+      <span class="style-label">정보 박스</span>
+      <label class="mini-label">About 배경 <input type="color" id="aboutBgColorInput" value="#000000"></label>
+      <label class="mini-label">NG 강조색 <input type="color" id="ngAccentColorInput" value="#a8402f"></label>
+    </div>
+    <div class="style-group">
+      <span class="style-label">하단 텍스트</span>
+      <label class="mini-label">색상 <input type="color" id="footerColorInput" value="#6a5d4a"></label>
     </div>
   </div>
 
@@ -997,6 +1013,46 @@ document.getElementById('bgBlurRange').addEventListener('input', (e)=>{
 // ---- box / tile border color ----
 document.getElementById('borderColorInput').addEventListener('input', (e)=>{
   card.style.setProperty('--frame-border', e.target.value);
+});
+
+// ---- color helpers ----
+function hexToRgb(hex){
+  hex = hex.replace('#','');
+  if(hex.length === 3) hex = hex.split('').map(c=>c+c).join('');
+  const num = parseInt(hex, 16);
+  return { r:(num>>16)&255, g:(num>>8)&255, b:num&255 };
+}
+function hexToRgba(hex, alpha){
+  const {r,g,b} = hexToRgb(hex);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+function lightenHex(hex, amt){
+  const {r,g,b} = hexToRgb(hex);
+  const mix = (c)=> Math.round(c + (255-c)*amt);
+  return `#${[mix(r),mix(g),mix(b)].map(x=>x.toString(16).padStart(2,'0')).join('')}`;
+}
+
+// ---- accent (gold) color ----
+document.getElementById('accentColorInput').addEventListener('input', (e)=>{
+  const hex = e.target.value;
+  card.style.setProperty('--gold', hex);
+  card.style.setProperty('--gold-soft', lightenHex(hex, 0.3));
+});
+
+// ---- info box colors (About background / NG accent) ----
+document.getElementById('aboutBgColorInput').addEventListener('input', (e)=>{
+  card.style.setProperty('--about-bg-color', hexToRgba(e.target.value, 0.15));
+});
+document.getElementById('ngAccentColorInput').addEventListener('input', (e)=>{
+  const hex = e.target.value;
+  card.style.setProperty('--ng-bg-color', hexToRgba(hex, 0.07));
+  card.style.setProperty('--ng-line-color', hexToRgba(hex, 0.35));
+  card.style.setProperty('--ng-label-color', lightenHex(hex, 0.35));
+});
+
+// ---- footer text color ----
+document.getElementById('footerColorInput').addEventListener('input', (e)=>{
+  card.style.setProperty('--footer-color', e.target.value);
 });
 
 // ---- floating text toolbar (appears when text is drag-selected) ----
