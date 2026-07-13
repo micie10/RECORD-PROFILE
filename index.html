@@ -169,7 +169,7 @@
     flex-shrink:0;
     display:flex;
     flex-direction:column;
-    gap:36px;
+    gap:28px;
   }
   .card-right{
     flex:1;
@@ -316,6 +316,93 @@
   }
   @keyframes spin{ to{ transform:rotate(360deg); } }
 
+  /* ---------- SONG LIST (below turntable) ---------- */
+  .song-list{
+    width:100%;
+  }
+  .songs{
+    display:flex;
+    flex-direction:column;
+  }
+  .song-row{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:7px 0;
+    border-bottom:1px solid var(--line-accent, var(--line));
+  }
+  .song-row:last-child{
+    border-bottom:none;
+    padding-bottom:0;
+  }
+  .song-row:first-child{
+    padding-top:0;
+  }
+  .song-num{
+    flex-shrink:0;
+    width:16px;
+    font-family:'Pretendard', sans-serif;
+    font-size:11px;
+    color:var(--gold-soft);
+  }
+  .song-cover{
+    position:relative;
+    flex-shrink:0;
+    width:34px; height:34px;
+    border-radius:2px;
+    background:#12100d;
+    border:1px solid var(--frame-border);
+    overflow:hidden;
+    cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .song-cover.has-img{ cursor:grab; }
+  .song-cover.dragging{ cursor:grabbing; }
+  .song-cover .placeholder-txt{
+    position:absolute; inset:0;
+    display:flex; align-items:center; justify-content:center;
+    font-size:14px;
+    color:#6a5d4a;
+    z-index:1;
+  }
+  .song-cover.has-img .placeholder-txt{ display:none; }
+  .song-info{
+    flex:1;
+    min-width:0;
+    display:flex;
+    flex-direction:column;
+    gap:1px;
+  }
+  .song-title{
+    font-family:'Pretendard', sans-serif;
+    font-size:12px;
+    font-weight:700;
+    letter-spacing:.02em;
+    color:var(--cream);
+    outline:none;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  .song-artist{
+    font-family:'Pretendard', sans-serif;
+    font-size:10.5px;
+    color:#a89a82;
+    outline:none;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  .song-time{
+    flex-shrink:0;
+    font-family:'Pretendard', sans-serif;
+    font-size:11px;
+    color:var(--gold-soft);
+    min-width:32px;
+    text-align:right;
+    outline:none;
+  }
+
   /* ---------- SECTION LABEL ---------- */
   .section-label{
     font-family:'Pretendard', sans-serif;
@@ -375,6 +462,7 @@
     display:flex; align-items:center; justify-content:center;
     cursor:pointer;
   }
+  #card.exporting .img-change-btn{ display:none; }
   .track .placeholder-txt{
     position:absolute; inset:0;
     display:flex; align-items:center; justify-content:center;
@@ -683,6 +771,47 @@
                 </div>
               </div>
             </div>
+
+            <div class="song-list">
+              <div class="songs">
+                <div class="song-row">
+                  <span class="song-num">01</span>
+                  <div class="song-cover" data-song="0"><span class="placeholder-txt">+</span></div>
+                  <div class="song-info">
+                    <div class="song-title" contenteditable="true" data-ph="곡 제목을 입력하세요">곡 제목</div>
+                    <div class="song-artist" contenteditable="true" data-ph="아티스트명을 입력하세요">아티스트명</div>
+                  </div>
+                  <div class="song-time" contenteditable="true" data-ph="0:00">0:00</div>
+                </div>
+                <div class="song-row">
+                  <span class="song-num">02</span>
+                  <div class="song-cover" data-song="1"><span class="placeholder-txt">+</span></div>
+                  <div class="song-info">
+                    <div class="song-title" contenteditable="true" data-ph="곡 제목을 입력하세요">곡 제목</div>
+                    <div class="song-artist" contenteditable="true" data-ph="아티스트명을 입력하세요">아티스트명</div>
+                  </div>
+                  <div class="song-time" contenteditable="true" data-ph="0:00">0:00</div>
+                </div>
+                <div class="song-row">
+                  <span class="song-num">03</span>
+                  <div class="song-cover" data-song="2"><span class="placeholder-txt">+</span></div>
+                  <div class="song-info">
+                    <div class="song-title" contenteditable="true" data-ph="곡 제목을 입력하세요">곡 제목</div>
+                    <div class="song-artist" contenteditable="true" data-ph="아티스트명을 입력하세요">아티스트명</div>
+                  </div>
+                  <div class="song-time" contenteditable="true" data-ph="0:00">0:00</div>
+                </div>
+                <div class="song-row">
+                  <span class="song-num">04</span>
+                  <div class="song-cover" data-song="3"><span class="placeholder-txt">+</span></div>
+                  <div class="song-info">
+                    <div class="song-title" contenteditable="true" data-ph="곡 제목을 입력하세요">곡 제목</div>
+                    <div class="song-artist" contenteditable="true" data-ph="아티스트명을 입력하세요">아티스트명</div>
+                  </div>
+                  <div class="song-time" contenteditable="true" data-ph="0:00">0:00</div>
+                </div>
+              </div>
+            </div>
           </div>
 
           <div class="card-right">
@@ -777,29 +906,48 @@ function setSlotImage(el, url){
 
 // html2canvas doesn't reliably support `object-fit: cover` combined with
 // CSS `transform`, and also doesn't reliably clip an oversized/offset image
-// to a circular overflow:hidden container. Rather than re-deriving the
-// object-fit+transform geometry by hand (risky to get exactly right), we
-// render an identical, correctly-styled copy off-screen, let the browser
-// lay it out for real, and read back its actual rendered box. That's then
-// used to draw a flat, already-cropped raster which replaces the live
-// <img> just for capture.
-async function measureRenderedImageBox(img, st, W, H){
-  const probe = document.createElement('div');
-  probe.style.cssText = `position:fixed; left:-99999px; top:0; width:${W}px; height:${H}px; overflow:visible;`;
-  const probeImg = document.createElement('img');
-  probeImg.src = img.src;
-  probeImg.style.cssText = `position:absolute; top:0; left:0; width:100%; height:100%; object-fit:cover; transform-origin:center center; transform:translate(${st.x}%, ${st.y}%) scale(${st.scale});`;
-  probe.appendChild(probeImg);
-  document.body.appendChild(probe);
-  await new Promise(res=>{ probeImg.complete ? res() : (probeImg.onload = probeImg.onerror = res); });
-  const containerRect = probe.getBoundingClientRect();
-  const imgRect = probeImg.getBoundingClientRect();
-  document.body.removeChild(probe);
+// to a circular overflow:hidden container. So we bake a flat, already-cropped
+// raster which replaces the live <img> just for capture.
+//
+// NOTE: this used to measure the "rendered" image box by creating an
+// off-screen copy of the <img> (with object-fit:cover + the pan/zoom
+// transform applied) and reading back getBoundingClientRect(). That doesn't
+// work: `object-fit` only changes how a replaced element's content is
+// *painted* inside its box — it never changes the box's own layout size.
+// So getBoundingClientRect() always came back ~equal to the container size,
+// regardless of the image's real aspect ratio or zoom level. Baking that
+// "geo" then squashed/stretched the *entire* source image into the slot,
+// which is exactly the "찌그러짐/구겨짐" (crumpled) look.
+//
+// Fix: compute the visible source-image crop rectangle directly with math,
+// mirroring what object-fit:cover + the CSS transform actually do:
+//   1. `cover` crop: scale the image up just enough that it fills the WxH
+//      box on both axes, centered (this is object-fit:cover's definition).
+//   2. the pan/zoom transform (translate %, scale) is then applied to that
+//      already-cover-fitted box; since it's a simple affine transform, the
+//      portion of the source image visible through the fixed WxH viewport
+//      is itself just another rectangle, computed below.
+function computeCoverCropRect(img, st, W, H){
+  const iw = img.naturalWidth || W;
+  const ih = img.naturalHeight || H;
+  const coverScale = Math.max(W / iw, H / ih);
+  const sw0 = W / coverScale, sh0 = H / coverScale;
+  const sx0 = (iw - sw0) / 2, sy0 = (ih - sh0) / 2;
+
+  const scale = st.scale || 1;
+  const tx = (st.x || 0) / 100 * W;
+  const ty = (st.y || 0) / 100 * H;
+
+  const boxVisibleW = W / scale;
+  const boxVisibleH = H / scale;
+  const boxVisibleX = W / 2 - (W / 2 + tx) / scale;
+  const boxVisibleY = H / 2 - (H / 2 + ty) / scale;
+
   return {
-    left: imgRect.left - containerRect.left,
-    top: imgRect.top - containerRect.top,
-    width: imgRect.width,
-    height: imgRect.height
+    left: sx0 + (boxVisibleX / W) * sw0,
+    top: sy0 + (boxVisibleY / H) * sh0,
+    width: (boxVisibleW / W) * sw0,
+    height: (boxVisibleH / H) * sh0
   };
 }
 async function prepareSlotsForExport(resScale=1){
@@ -811,10 +959,10 @@ async function prepareSlotsForExport(resScale=1){
     const el = img.parentElement;
     const W = Math.max(1, Math.round(el.clientWidth));
     const H = Math.max(1, Math.round(el.clientHeight));
-    const geo = await measureRenderedImageBox(img, st, W, H);
-    if(geo.width < W * 0.5 || geo.height < H * 0.5){
-      console.warn('[자기소개틀] 이미지가 예상보다 작게 측정됐어요 — 원본 이미지나 브라우저 캐시를 확인해보세요.', { slot: el.className, W, H, geo, naturalWidth: img.naturalWidth, naturalHeight: img.naturalHeight, state: st });
+    if(!img.complete || !img.naturalWidth){
+      await new Promise(res=>{ img.onload = res; img.onerror = res; });
     }
+    const geo = computeCoverCropRect(img, st, W, H);
     const off = document.createElement('canvas');
     off.width = Math.round(W * resScale);
     off.height = Math.round(H * resScale);
@@ -827,10 +975,10 @@ async function prepareSlotsForExport(resScale=1){
       ctx.beginPath();
       ctx.arc(W / 2, H / 2, Math.min(W, H) / 2, 0, Math.PI * 2);
       ctx.clip();
-      ctx.drawImage(img, geo.left, geo.top, geo.width, geo.height);
+      ctx.drawImage(img, geo.left, geo.top, geo.width, geo.height, 0, 0, W, H);
       ctx.restore();
     } else {
-      ctx.drawImage(img, geo.left, geo.top, geo.width, geo.height);
+      ctx.drawImage(img, geo.left, geo.top, geo.width, geo.height, 0, 0, W, H);
     }
     const dataUrl = off.toDataURL('image/png');
     saved.push({ img, prevSrc: img.src, prevStyle: img.getAttribute('style'), el, prevElOverflow: el.style.overflow });
@@ -914,6 +1062,7 @@ function setupImageSlot(el, opts={}){
 
 setupImageSlot(document.getElementById('vinylLabel'), {allowClickReplace:true});
 document.querySelectorAll('.track').forEach(t=>setupImageSlot(t));
+document.querySelectorAll('.song-cover').forEach(c=>setupImageSlot(c, {allowClickReplace:true}));
 
 document.querySelectorAll('.img-change-btn').forEach(btn=>{
   btn.addEventListener('click', (e)=>{
@@ -1224,6 +1373,8 @@ document.getElementById('pngBtn').addEventListener('click', async ()=>{
 
     // 캡처 중에는 화면 표시용 스케일을 해제해 원본 크기로 렌더링
     stage.style.transform = 'none';
+    // 결과물에는 이미지 변경 아이콘(⟳)이 보이지 않도록 캡처 중에만 숨김
+    card.classList.add('exporting');
 
     // html2canvas가 object-fit+transform 조합을 제대로 지원하지 않아서
     // 캡처 직전에만 정확한 픽셀 위치/크기로 잠깐 바꿔줍니다
@@ -1243,6 +1394,7 @@ document.getElementById('pngBtn').addEventListener('click', async ()=>{
       y: 0
     });
 
+    card.classList.remove('exporting');
     restoreSlotsAfterExport(savedSlots);
     savedSlots = null;
 
@@ -1262,6 +1414,7 @@ document.getElementById('pngBtn').addEventListener('click', async ()=>{
     console.error(err);
     status.textContent = '오류: ' + err.message;
   } finally {
+    card.classList.remove('exporting');
     if(savedSlots) restoreSlotsAfterExport(savedSlots);
     stage.style.transform = prevTransform;
     btn.disabled = false;
@@ -1328,6 +1481,8 @@ document.getElementById('gifBtn').addEventListener('click', async ()=>{
     stage.style.transform = 'none';
     progress.style.display = 'flex';
     status.textContent = 'GIF 프레임을 캡처하는 중입니다...';
+    // 결과물에는 이미지 변경 아이콘(⟳)이 보이지 않도록 캡처 중에만 숨김
+    card.classList.add('exporting');
 
     // html2canvas가 object-fit+transform 조합을 제대로 지원하지 않아서
     // 캡처 전에만 정확한 픽셀 위치/크기로 잠깐 바꿔줍니다 (프레임 내내 유지)
@@ -1371,6 +1526,7 @@ document.getElementById('gifBtn').addEventListener('click', async ()=>{
 
     restoreSlotsAfterExport(savedSlots);
     savedSlots = null;
+    card.classList.remove('exporting');
 
     status.textContent = 'GIF를 인코딩하는 중입니다...';
 
@@ -1392,6 +1548,7 @@ document.getElementById('gifBtn').addEventListener('click', async ()=>{
   } catch(err){
     console.error(err);
     status.textContent = '오류: ' + err.message;
+    card.classList.remove('exporting');
     if(savedSlots) restoreSlotsAfterExport(savedSlots);
     progress.style.display = 'none';
     btn.disabled = false;
