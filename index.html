@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>자기소개틀 생성기 — 레코드판</title>
+<title> RECORD PROFILE MAKER </title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.js"></script>
@@ -136,7 +136,7 @@
   #card::before{
     content:"";
     position:absolute; inset:18px;
-    border:1px solid rgba(201,162,75,.25);
+    border:1px solid var(--outer-frame-color, rgba(201,162,75,.25));
     pointer-events:none;
     z-index:2;
   }
@@ -195,7 +195,7 @@
     font-style:italic;
     font-weight:500;
     font-size:18px;
-    color:var(--gold-soft);
+    color:#e4c988;
     margin:0;
     outline:none;
   }
@@ -332,7 +332,7 @@
     content:"";
     flex:1;
     height:1px;
-    background:var(--line);
+    background:var(--line-accent, var(--line));
   }
 
   /* ---------- PLAYLIST ---------- */
@@ -435,8 +435,9 @@
     font-family:'Pretendard', sans-serif;
     font-size:10px;
     letter-spacing:.15em;
-    color:var(--footer-color, #6a5d4a);
+    color:#6a5d4a;
     text-transform:uppercase;
+    border-top-color:var(--line-accent, var(--line));
   }
 
   /* progress overlay */
@@ -622,6 +623,10 @@
       <label class="mini-label">색상 <input type="color" id="borderColorInput" value="#3a322a"></label>
     </div>
     <div class="style-group">
+      <span class="style-label">카드 외곽 테두리</span>
+      <label class="mini-label">색상 <input type="color" id="outerFrameColorInput" value="#c9a24b"></label>
+    </div>
+    <div class="style-group">
       <span class="style-label">포인트 색상</span>
       <label class="mini-label">골드 포인트 <input type="color" id="accentColorInput" value="#c9a24b"></label>
     </div>
@@ -629,10 +634,6 @@
       <span class="style-label">정보 박스</span>
       <label class="mini-label">About 배경 <input type="color" id="aboutBgColorInput" value="#000000"></label>
       <label class="mini-label">NG 강조색 <input type="color" id="ngAccentColorInput" value="#a8402f"></label>
-    </div>
-    <div class="style-group">
-      <span class="style-label">하단 텍스트</span>
-      <label class="mini-label">색상 <input type="color" id="footerColorInput" value="#6a5d4a"></label>
     </div>
   </div>
 
@@ -681,7 +682,6 @@
                   <div class="base"></div>
                 </div>
               </div>
-              <button type="button" class="change-photo-btn" id="vinylChangeBtn">사진 변경</button>
             </div>
           </div>
 
@@ -915,10 +915,6 @@ function setupImageSlot(el, opts={}){
 setupImageSlot(document.getElementById('vinylLabel'), {allowClickReplace:true});
 document.querySelectorAll('.track').forEach(t=>setupImageSlot(t));
 
-document.getElementById('vinylChangeBtn').addEventListener('click', ()=>{
-  currentUploadTarget = { el: document.getElementById('vinylLabel'), type:'vinyl' };
-  fileInput.click();
-});
 document.querySelectorAll('.img-change-btn').forEach(btn=>{
   btn.addEventListener('click', (e)=>{
     e.stopPropagation();
@@ -1015,6 +1011,13 @@ document.getElementById('borderColorInput').addEventListener('input', (e)=>{
   card.style.setProperty('--frame-border', e.target.value);
 });
 
+// ---- card outer frame border color (also drives the section-divider lines and footer top line) ----
+document.getElementById('outerFrameColorInput').addEventListener('input', (e)=>{
+  const hex = e.target.value;
+  card.style.setProperty('--outer-frame-color', hexToRgba(hex, 0.25));
+  card.style.setProperty('--line-accent', hex);
+});
+
 // ---- color helpers ----
 function hexToRgb(hex){
   hex = hex.replace('#','');
@@ -1048,11 +1051,6 @@ document.getElementById('ngAccentColorInput').addEventListener('input', (e)=>{
   card.style.setProperty('--ng-bg-color', hexToRgba(hex, 0.07));
   card.style.setProperty('--ng-line-color', hexToRgba(hex, 0.35));
   card.style.setProperty('--ng-label-color', lightenHex(hex, 0.35));
-});
-
-// ---- footer text color ----
-document.getElementById('footerColorInput').addEventListener('input', (e)=>{
-  card.style.setProperty('--footer-color', e.target.value);
 });
 
 // ---- floating text toolbar (appears when text is drag-selected) ----
