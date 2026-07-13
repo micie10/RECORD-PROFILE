@@ -137,7 +137,7 @@
   #card::before{
     content:"";
     position:absolute; inset:18px;
-    border:1px solid var(--outer-frame-color, rgba(201,162,75,.25));
+    border:1px solid var(--outer-frame-color, #c9a24b);
     pointer-events:none;
     z-index:2;
   }
@@ -328,8 +328,8 @@
   .song-row{
     display:flex;
     align-items:center;
-    gap:10px;
-    padding:7px 0;
+    gap:13px;
+    padding:10px 0;
     border-bottom:1px solid var(--line-accent, var(--line));
   }
   .song-row:last-child{
@@ -341,15 +341,15 @@
   }
   .song-num{
     flex-shrink:0;
-    width:16px;
+    width:20px;
     font-family:'Pretendard', sans-serif;
-    font-size:11px;
+    font-size:13px;
     color:var(--gold-soft);
   }
   .song-cover{
     position:relative;
     flex-shrink:0;
-    width:34px; height:34px;
+    width:42px; height:42px;
     border-radius:2px;
     background:#12100d;
     border:1px solid var(--frame-border);
@@ -362,7 +362,7 @@
   .song-cover .placeholder-txt{
     position:absolute; inset:0;
     display:flex; align-items:center; justify-content:center;
-    font-size:14px;
+    font-size:16px;
     color:#6a5d4a;
     z-index:1;
   }
@@ -372,11 +372,11 @@
     min-width:0;
     display:flex;
     flex-direction:column;
-    gap:1px;
+    gap:2px;
   }
   .song-title{
     font-family:'Pretendard', sans-serif;
-    font-size:12px;
+    font-size:14px;
     font-weight:700;
     letter-spacing:.02em;
     color:var(--cream);
@@ -387,7 +387,7 @@
   }
   .song-artist{
     font-family:'Pretendard', sans-serif;
-    font-size:10.5px;
+    font-size:12px;
     color:#a89a82;
     outline:none;
     white-space:nowrap;
@@ -397,9 +397,9 @@
   .song-time{
     flex-shrink:0;
     font-family:'Pretendard', sans-serif;
-    font-size:11px;
+    font-size:13px;
     color:var(--gold-soft);
-    min-width:32px;
+    min-width:36px;
     text-align:right;
     outline:none;
   }
@@ -1411,7 +1411,7 @@ document.getElementById('borderColorInput').addEventListener('input', (e)=>{
 // ---- card outer frame border color (also drives the section-divider lines and footer top line) ----
 document.getElementById('outerFrameColorInput').addEventListener('input', (e)=>{
   const hex = e.target.value;
-  card.style.setProperty('--outer-frame-color', hexToRgba(hex, 0.25));
+  card.style.setProperty('--outer-frame-color', hex);
   card.style.setProperty('--line-accent', hex);
 });
 
