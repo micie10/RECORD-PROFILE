@@ -1269,6 +1269,27 @@ document.getElementById('pngBtn').addEventListener('click', async ()=>{
 });
 
 // ---- GIF export (captures the vinyl spin) ----
+// Chrome/Edge refuse to construct a Worker directly from a cross-origin
+// script URL (e.g. when this page is hosted on GitHub Pages and the worker
+// lives on cdnjs). Fetching the worker's source and wrapping it in a
+// same-origin Blob URL works around that restriction.
+let gifWorkerBlobUrlPromise = null;
+function getGifWorkerScriptUrl(){
+  if(!gifWorkerBlobUrlPromise){
+    gifWorkerBlobUrlPromise = fetch('https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.worker.js')
+      .then(res=>{
+        if(!res.ok) throw new Error('워커 스크립트를 불러오지 못했습니다 (' + res.status + ')');
+        return res.text();
+      })
+      .then(text=> URL.createObjectURL(new Blob([text], {type:'application/javascript'})))
+      .catch(err=>{
+        gifWorkerBlobUrlPromise = null; // allow retry on next click
+        throw err;
+      });
+  }
+  return gifWorkerBlobUrlPromise;
+}
+
 document.getElementById('gifBtn').addEventListener('click', async ()=>{
   const btn = document.getElementById('gifBtn');
   const status = document.getElementById('actionStatus');
@@ -1315,12 +1336,16 @@ document.getElementById('gifBtn').addEventListener('click', async ()=>{
     // pause css animation, take manual control of rotation
     vinyl.style.animation = 'none';
 
+    status.textContent = 'GIF 워커를 불러오는 중입니다...';
+    const workerScriptUrl = await getGifWorkerScriptUrl();
+    status.textContent = 'GIF 프레임을 캡처하는 중입니다...';
+
     const gif = new GIF({
       workers: 2,
       quality: 10,
       width: card.offsetWidth,
       height: card.offsetHeight,
-      workerScript: 'https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.worker.js'
+      workerScript: workerScriptUrl
     });
 
     for(let i=0; i<FRAMES; i++){
