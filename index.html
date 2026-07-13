@@ -786,7 +786,7 @@ async function measureRenderedImageBox(img, st, W, H){
     height: imgRect.height
   };
 }
-async function prepareSlotsForExport(){
+async function prepareSlotsForExport(resScale=1){
   const saved = [];
   const imgs = card.querySelectorAll('img.slot-img');
   for(const img of imgs){
@@ -800,8 +800,10 @@ async function prepareSlotsForExport(){
       console.warn('[자기소개틀] 이미지가 예상보다 작게 측정됐어요 — 원본 이미지나 브라우저 캐시를 확인해보세요.', { slot: el.className, W, H, geo, naturalWidth: img.naturalWidth, naturalHeight: img.naturalHeight, state: st });
     }
     const off = document.createElement('canvas');
-    off.width = W; off.height = H;
+    off.width = Math.round(W * resScale);
+    off.height = Math.round(H * resScale);
     const ctx = off.getContext('2d');
+    ctx.scale(resScale, resScale);
     if(el.classList.contains('vinyl-label')){
       // circular slot: clip to a circle so the baked PNG itself has
       // transparent corners, independent of the container's own clipping
@@ -1171,7 +1173,7 @@ document.getElementById('pngBtn').addEventListener('click', async ()=>{
 
     // html2canvas가 object-fit+transform 조합을 제대로 지원하지 않아서
     // 캡처 직전에만 정확한 픽셀 위치/크기로 잠깐 바꿔줍니다
-    savedSlots = await prepareSlotsForExport();
+    savedSlots = await prepareSlotsForExport(2);
 
     // ③ 카드 DOM 전체를 캔버스로 렌더링
     const canvas = await html2canvas(card, {
