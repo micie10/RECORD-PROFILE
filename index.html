@@ -815,7 +815,7 @@ async function prepareSlotsForExport(){
       ctx.drawImage(img, geo.left, geo.top, geo.width, geo.height);
     }
     const dataUrl = off.toDataURL('image/png');
-    saved.push({ img, prevSrc: img.src, prevStyle: img.getAttribute('style') });
+    saved.push({ img, prevSrc: img.src, prevStyle: img.getAttribute('style'), el, prevElOverflow: el.style.overflow });
     await new Promise(res=>{ img.onload = res; img.onerror = res; img.src = dataUrl; });
     img.style.transform = 'none';
     img.style.objectFit = 'fill';
@@ -823,14 +823,23 @@ async function prepareSlotsForExport(){
     img.style.top = '0px';
     img.style.width = '100%';
     img.style.height = '100%';
+    if(el.classList.contains('vinyl-label')){
+      // the image is already circularly pre-clipped (transparent corners)
+      // and exactly fills the box, so it doesn't need the container to
+      // clip it too. Turning off overflow avoids a possible second,
+      // buggy clip pass during html2canvas's capture — border-radius
+      // stays put so the circular box-shadow ring still renders round.
+      el.style.overflow = 'visible';
+    }
   }
   return saved;
 }
 function restoreSlotsAfterExport(saved){
-  saved.forEach(({img, prevSrc, prevStyle})=>{
+  saved.forEach(({img, prevSrc, prevStyle, el, prevElOverflow})=>{
     img.src = prevSrc;
     if(prevStyle === null) img.removeAttribute('style');
     else img.setAttribute('style', prevStyle);
+    if(el) el.style.overflow = prevElOverflow || '';
   });
 }
 
