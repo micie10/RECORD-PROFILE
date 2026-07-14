@@ -100,10 +100,39 @@
     width:100%;
     display:flex;
     justify-content:center;
+    position:relative;
   }
+  .stage-wrap.pan-ready{ cursor:grab; }
+  .stage-wrap.pan-ready #card,
+  .stage-wrap.pan-ready [contenteditable]{ cursor:grab; }
+  .stage-wrap.panning,
+  .stage-wrap.panning #card,
+  .stage-wrap.panning [contenteditable]{ cursor:grabbing !important; }
+  .stage-wrap.panning{ user-select:none; }
   #stage{
     position:relative;
   }
+  .zoom-indicator{
+    position:sticky;
+    top:10px;
+    align-self:flex-start;
+    margin-left:12px;
+    z-index:20;
+    background:rgba(14,12,10,.85);
+    border:1px solid var(--line);
+    color:var(--gold-soft);
+    font-family:'Pretendard', sans-serif;
+    font-size:12px;
+    font-weight:600;
+    padding:6px 10px;
+    border-radius:3px;
+    letter-spacing:.02em;
+    pointer-events:none;
+    opacity:0;
+    transition:opacity .2s ease;
+    white-space:nowrap;
+  }
+  .zoom-indicator.show{ opacity:1; }
 
   /* ---------- CARD (1920×1080 landscape) ---------- */
   #card{
@@ -757,8 +786,11 @@
     카드 위 텍스트는 <b>클릭해서 바로 수정</b>하세요. 글자를 <b>드래그해서 선택</b>하면 크기·굵기·기울임·색상·형광펜을 바꿀 수 있는 도구가 떠요.
     레코드 라벨과 4개의 플레이리스트 칸은 <BR> <b>클릭하면 이미지를 넣을 수</b> 있고, 넣은 뒤에는 <b>휠로 확대·드래그로 이동</b>할 수 있어요.
     GIF로 저장하면 레코드판이 <b>돌아가는 움직임까지</b> 저장됩니다.<BR>
-    <b>스티커 추가</b> 버튼으로 이미지를 카드 위에 자유롭게 올릴 수 있어요. 몸통을 <b>드래그해서 위치</b>를, 모서리의 동그란 <b>손잡이로 크기</b>를, 위쪽 손잡이로 <b>회전</b>을 조절하세요. 빨간 × 버튼으로 삭제할 수 있어요.
+    <b>스티커 추가</b> 버튼으로 이미지를 카드 위에 자유롭게 올릴 수 있어요. 몸통을 <b>드래그해서 위치</b>를, 모서리의 동그란 <b>손잡이로 크기</b>를, 위쪽 손잡이로 <b>회전</b>을 조절하세요. 빨간 × 버튼으로 삭제할 수 있어요.<BR>
+    <b>Ctrl + 마우스 휠</b>로 카드 미리보기 자체를 확대·축소할 수 있어요(작업 화면 확대용, 저장 결과에는 영향 없음). <b>Ctrl+0</b>으로 원래 크기·위치로 되돌릴 수 있어요.
+    화면을 확대한 뒤에는 <b>스페이스바를 누른 채 드래그</b>(또는 <b>마우스 휠 버튼(가운데)으로 드래그</b>)하면 보이는 위치를 이동할 수 있어요.
   </div>
+
 
   <div class="floating-toolbar" id="floatingToolbar">
     <label class="mini-label">크기
@@ -803,6 +835,7 @@
   </div>
 
   <div class="stage-wrap">
+    <div class="zoom-indicator" id="zoomIndicator">100%</div>
     <div id="stage">
       <div id="card">
         <div class="bg-layer" id="bgLayer">
@@ -942,17 +975,122 @@ let currentUploadTarget = null;
 
 const CARD_W = 1920, CARD_H = 1080;
 let currentStageScale = 1;
-function scaleStage(){
-  const maxW = Math.min(window.innerWidth - 32, CARD_W);
-  const maxH = window.innerHeight * 0.62;
-  const scale = Math.min(1, maxW / CARD_W, maxH / CARD_H);
+let baseFitScale = 1;   // 화면에 맞춰 자동 계산되는 기본 배율
+let userZoom = 1;       // Ctrl+휠로 사용자가 추가로 조절하는 배율(작업 편의용)
+let panX = 0, panY = 0; // 스페이스+드래그(또는 휠클릭 드래그)로 이동한 화면 위치(작업 편의용)
+const ZOOM_MIN = 0.4, ZOOM_MAX = 3;
+
+function applyStageTransform(){
+  const scale = baseFitScale * userZoom;
   currentStageScale = scale;
-  stage.style.transform = `scale(${scale})`;
+  // translate를 scale 앞에 두면 확대 배율과 상관없이 마우스가 움직인 만큼만 화면이 이동합니다
+  stage.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
   stage.style.transformOrigin = 'top center';
   stage.style.marginBottom = (CARD_H*scale - CARD_H) + 'px';
 }
+
+function scaleStage(){
+  const maxW = Math.min(window.innerWidth - 32, CARD_W);
+  const maxH = window.innerHeight * 0.62;
+  baseFitScale = Math.min(1, maxW / CARD_W, maxH / CARD_H);
+  applyStageTransform();
+}
 window.addEventListener('resize', scaleStage);
 scaleStage();
+
+// ---- Ctrl + 마우스 휠로 작업 화면 확대/축소 ----
+// (저장되는 PNG/GIF 크기와는 무관하며, 편집 중 눈으로 보기 편하도록 화면만 키우고 줄입니다)
+const stageWrap = document.querySelector('.stage-wrap');
+const zoomIndicator = document.getElementById('zoomIndicator');
+let zoomIndicatorTimer = null;
+function showZoomIndicator(){
+  zoomIndicator.textContent = Math.round(userZoom * 100) + '%';
+  zoomIndicator.classList.add('show');
+  clearTimeout(zoomIndicatorTimer);
+  zoomIndicatorTimer = setTimeout(()=> zoomIndicator.classList.remove('show'), 900);
+}
+stageWrap.addEventListener('wheel', (e)=>{
+  if(!e.ctrlKey && !e.metaKey) return; // Ctrl(윈도우) / Cmd(맥) 누른 상태에서만 동작
+  e.preventDefault();
+  const factor = Math.exp(-e.deltaY * 0.0015);
+  userZoom = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, userZoom * factor));
+  applyStageTransform();
+  showZoomIndicator();
+}, {passive:false});
+
+// Ctrl+0 으로 확대/이동 초기화
+window.addEventListener('keydown', (e)=>{
+  if((e.ctrlKey || e.metaKey) && e.key === '0'){
+    e.preventDefault();
+    userZoom = 1;
+    panX = 0; panY = 0;
+    applyStageTransform();
+    showZoomIndicator();
+  }
+});
+
+// ---- 드래그로 화면 위치 이동(패닝) ----
+// 카드 안은 텍스트 편집/스티커 이동/이미지 조정 등 기존 드래그 동작이 이미 많아서,
+// "스페이스바를 누른 채 드래그" 또는 "마우스 휠(가운데) 버튼 드래그"일 때만 화면 이동으로 인식합니다.
+let spaceHeld = false;
+let isPanning = false;
+let panStartX = 0, panStartY = 0, panOriginX = 0, panOriginY = 0;
+
+function isTypingTarget(el){
+  return !!el && (el.isContentEditable || el.tagName === 'INPUT' || el.tagName === 'TEXTAREA');
+}
+
+window.addEventListener('keydown', (e)=>{
+  if(e.code !== 'Space') return;
+  if(isTypingTarget(document.activeElement)) return; // 텍스트 입력 중에는 스페이스를 그냥 입력
+  if(!spaceHeld){
+    spaceHeld = true;
+    stageWrap.classList.add('pan-ready');
+  }
+  e.preventDefault(); // 페이지가 스페이스로 스크롤되는 것 방지
+});
+window.addEventListener('keyup', (e)=>{
+  if(e.code !== 'Space') return;
+  spaceHeld = false;
+  isPanning = false;
+  stageWrap.classList.remove('pan-ready','panning');
+});
+// 창 포커스를 잃으면(예: 다른 탭 이동) 스페이스가 눌린 채로 붙잡히는 것 방지
+window.addEventListener('blur', ()=>{
+  spaceHeld = false;
+  isPanning = false;
+  stageWrap.classList.remove('pan-ready','panning');
+});
+
+function startPan(e){
+  isPanning = true;
+  panStartX = e.clientX;
+  panStartY = e.clientY;
+  panOriginX = panX;
+  panOriginY = panY;
+  stageWrap.classList.add('panning');
+  e.preventDefault();
+}
+stageWrap.addEventListener('mousedown', (e)=>{
+  const isMiddleClick = e.button === 1;
+  const isSpaceDrag = e.button === 0 && spaceHeld;
+  if(!isMiddleClick && !isSpaceDrag) return;
+  startPan(e);
+});
+// 브라우저 기본 동작(가운데 버튼 자동 스크롤)을 막기 위해 auxclick/mousedown 모두 처리
+stageWrap.addEventListener('auxclick', (e)=>{ if(e.button === 1) e.preventDefault(); });
+
+window.addEventListener('mousemove', (e)=>{
+  if(!isPanning) return;
+  panX = panOriginX + (e.clientX - panStartX);
+  panY = panOriginY + (e.clientY - panStartY);
+  applyStageTransform();
+});
+window.addEventListener('mouseup', ()=>{
+  if(!isPanning) return;
+  isPanning = false;
+  stageWrap.classList.remove('panning');
+});
 
 if(location.protocol === 'file:'){
   document.getElementById('fileProtocolWarning').style.display = 'block';
