@@ -328,13 +328,13 @@
   .tonearm .base{
     position:absolute; top:0; right:0;
     width:30px; height:30px; border-radius:50%;
-    background:linear-gradient(145deg,#d9c58a,#8a6f2e);
+    background:linear-gradient(145deg, var(--tonearm-light,#d9c58a), var(--tonearm-dark,#8a6f2e));
     box-shadow:0 3px 6px rgba(0,0,0,.5);
   }
   .tonearm .arm{
     position:absolute; top:12px; right:12px;
     width:185px; height:5px;
-    background:linear-gradient(90deg,#8a6f2e,#e4c988);
+    background:linear-gradient(90deg, var(--tonearm-dark,#8a6f2e), var(--tonearm-light,#e4c988));
     transform-origin:right center;
     transform:rotate(-38deg);
     border-radius:2px;
@@ -342,7 +342,7 @@
   .tonearm .head{
     position:absolute; top:-5px; left:-3px;
     width:16px; height:16px; border-radius:2px;
-    background:#e4c988;
+    background:var(--tonearm-light,#e4c988);
   }
   @keyframes spin{ to{ transform:rotate(360deg); } }
 
@@ -826,6 +826,10 @@
     <div class="style-group">
       <span class="style-label">포인트 색상</span>
       <label class="mini-label">골드 포인트 <input type="color" id="accentColorInput" value="#c9a24b"></label>
+    </div>
+    <div class="style-group">
+      <span class="style-label">레코드판 핀</span>
+      <label class="mini-label">색상 <input type="color" id="tonearmColorInput" value="#e4c988"></label>
     </div>
     <div class="style-group">
       <span class="style-label">정보 박스</span>
@@ -1575,6 +1579,13 @@ document.getElementById('accentColorInput').addEventListener('input', (e)=>{
   const hex = e.target.value;
   card.style.setProperty('--gold', hex);
   card.style.setProperty('--gold-soft', lightenHex(hex, 0.3));
+});
+
+// ---- tonearm (pin) color ----
+document.getElementById('tonearmColorInput').addEventListener('input', (e)=>{
+  const hex = e.target.value;
+  card.style.setProperty('--tonearm-light', lightenHex(hex, 0.25));
+  card.style.setProperty('--tonearm-dark', hex);
 });
 
 // ---- info box colors (About background / NG accent) ----
